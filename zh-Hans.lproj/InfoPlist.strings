@@ -1,0 +1,2 @@
+"CFBundleName" = "Flycut";
+"NSAppleEventsUsageDescription" = "Flycut 需要此权限来将文本粘贴到其他 App，并将自身添加到登录项以便登录时启动。";

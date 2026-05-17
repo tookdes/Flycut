@@ -21,18 +21,46 @@
 #import "NSWindow+ULIZoomEffect.h"
 #import "MJCloudKitUserDefaultsSync/MJCloudKitUserDefaultsSync.h"
 #import <ApplicationServices/ApplicationServices.h>
+#import <Carbon/Carbon.h>
 #import <CoreFoundation/CoreFoundation.h>
 #import <ServiceManagement/ServiceManagement.h>
+#import <Security/Security.h>
 
 @implementation AppController
 
-/// Determines, through a hack of sorts, if the app is running sandboxed. The SANDBOXING define has no direct connection to being sandboxed, but this method identifies the state by looking for a directory which will have at least eight path components if sandboxed and is quite unlikely to have that many if not sandboxed. Of course, if this doesn't work for your unique case, just do a custom build with this method returning NO.
+static BOOL FlycutCurrentProcessHasBooleanEntitlement(CFStringRef entitlement) {
+	static dispatch_once_t onceToken;
+	static NSMutableDictionary *cachedEntitlements = nil;
+	dispatch_once(&onceToken, ^{
+		cachedEntitlements = [[NSMutableDictionary alloc] init];
+	});
+
+	NSString *cacheKey = (NSString *)entitlement;
+	NSNumber *cachedValue = [cachedEntitlements objectForKey:cacheKey];
+	if ( nil != cachedValue ) {
+		return [cachedValue boolValue];
+	}
+
+	BOOL hasEntitlement = NO;
+	SecTaskRef task = SecTaskCreateFromSelf(kCFAllocatorDefault);
+	if ( nil != task ) {
+		CFTypeRef value = SecTaskCopyValueForEntitlement(task, entitlement, NULL);
+		if ( nil != value ) {
+			if ( CFBooleanGetTypeID() == CFGetTypeID(value) ) {
+				hasEntitlement = CFBooleanGetValue(value);
+			}
+			CFRelease(value);
+		}
+		CFRelease(task);
+	}
+
+	[cachedEntitlements setObject:[NSNumber numberWithBool:hasEntitlement] forKey:cacheKey];
+	return hasEntitlement;
+}
+
+/// Determines if the app is running with the sandbox entitlement enabled.
 + (BOOL)isAppSandboxed {
-	// Get the Desktop directory:
-	NSArray *paths = NSSearchPathForDirectoriesInDomains
-	(NSDesktopDirectory, NSUserDomainMask, YES);
-	NSString *desktopDirectory = [paths objectAtIndex:0];
-	return ((NSArray*)[desktopDirectory componentsSeparatedByString:@"/"]).count >= 8;
+	return FlycutCurrentProcessHasBooleanEntitlement(CFSTR("com.apple.security.app-sandbox"));
 }
 
 - (id)init
@@ -129,7 +157,11 @@
     BOOL suppressAlert = [[NSUserDefaults standardUserDefaults] boolForKey:@"suppressAccessibilityAlert"];
     NSDictionary* options = @{(id) (kAXTrustedCheckOptionPrompt): @NO};
     if (!suppressAlert && AXIsProcessTrustedWithOptions != NULL && !AXIsProcessTrustedWithOptions((CFDictionaryRef) (options))) {
-        NSAlert *alert = [NSAlert alertWithMessageText:@"Flycut" defaultButton:@"OK" alternateButton:nil otherButton:nil informativeTextWithFormat:@"For correct functioning of the app please tick Flycut in Accessibility apps list"];
+        NSAlert *alert = [NSAlert alertWithMessageText:NSLocalizedString(@"Flycut", @"App name shown in alerts")
+                                         defaultButton:NSLocalizedString(@"OK", @"Default alert button")
+                                       alternateButton:nil
+                                           otherButton:nil
+                             informativeTextWithFormat:@"%@", NSLocalizedString(@"For correct functioning of the app please tick Flycut in Accessibility apps list", @"Accessibility permission alert message")];
         alert.showsSuppressionButton = YES;
         [alert runModal];
         if (alert.suppressionButton.state == NSOnState) {
@@ -149,7 +181,11 @@
     if (ver.majorVersion == 10 && ver.minorVersion <= 13) {
         BOOL suppressAlert = [[NSUserDefaults standardUserDefaults] boolForKey:@"suppressOldOSXAlert"];
         if (!suppressAlert) {
-            NSAlert *alert = [NSAlert alertWithMessageText:@"Flycut" defaultButton:@"OK" alternateButton:nil otherButton:nil informativeTextWithFormat:@"Unfortunatly due to some app sandbox security restrictions from Apple Flycut may not correctly function on MacOSX 10.13 or lower. You can download non sandboxed version here: https://github.com/TermiT/Flycut/releases"];
+            NSAlert *alert = [NSAlert alertWithMessageText:NSLocalizedString(@"Flycut", @"App name shown in alerts")
+                                             defaultButton:NSLocalizedString(@"OK", @"Default alert button")
+                                           alternateButton:nil
+                                               otherButton:nil
+                                 informativeTextWithFormat:@"%@", NSLocalizedString(@"Unfortunatly due to some app sandbox security restrictions from Apple Flycut may not correctly function on MacOSX 10.13 or lower. You can download non sandboxed version here: https://github.com/TermiT/Flycut/releases", @"Old macOS sandbox limitation alert message")];
             alert.showsSuppressionButton = YES;
             [alert runModal];
             if (alert.suppressionButton.state == NSOnState) {
@@ -159,6 +195,50 @@
         }
     }
 #endif
+}
+
+- (BOOL)sandboxedLoginItemIsEnabled
+{
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
+	if (@available(macOS 13.0, *)) {
+		SMAppServiceStatus status = [SMAppService loginItemServiceWithIdentifier:kFlycutHelperId].status;
+		return status == SMAppServiceStatusEnabled || status == SMAppServiceStatusRequiresApproval;
+	}
+#endif
+	return [[NSUserDefaults standardUserDefaults] boolForKey:@"loadOnStartup"];
+}
+
+- (BOOL)setSandboxedLoginItemEnabled:(BOOL)enabled
+{
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
+	if (@available(macOS 13.0, *)) {
+		SMAppService *loginItem = [SMAppService loginItemServiceWithIdentifier:kFlycutHelperId];
+		NSError *error = nil;
+		BOOL alreadyEnabled = loginItem.status == SMAppServiceStatusEnabled || loginItem.status == SMAppServiceStatusRequiresApproval;
+
+		if ( enabled && alreadyEnabled ) {
+			return YES;
+		}
+		if ( !enabled && loginItem.status == SMAppServiceStatusNotRegistered ) {
+			return YES;
+		}
+
+		BOOL success = enabled ? [loginItem registerAndReturnError:&error] : [loginItem unregisterAndReturnError:&error];
+		if ( !success ) {
+			DLog(@"Unable to %@ login item: %@", enabled ? @"register" : @"unregister", error);
+		}
+		return success;
+	}
+#endif
+	return SMLoginItemSetEnabled((__bridge CFStringRef)kFlycutHelperId, enabled);
+}
+
+- (BOOL)loadOnStartupIsEnabled
+{
+	if ([AppController isAppSandboxed]) {
+		return [self sandboxedLoginItemIsEnabled];
+	}
+	return [UKLoginItemRegistry indexForLoginItemWithPath:[[NSBundle mainBundle] bundlePath]] >= 0;
 }
 
 
@@ -191,7 +271,8 @@
 
 	// Set up the bezel date formatter
 	dateFormat = [[NSDateFormatter alloc] init];
-	[dateFormat setDateFormat:@"EEEE, MMMM dd 'at' h:mm a"];
+	[dateFormat setDateStyle:NSDateFormatterFullStyle];
+	[dateFormat setTimeStyle:NSDateFormatterShortStyle];
 
 	// Create our pasteboard interface
     jcPasteboard = [NSPasteboard generalPasteboard];
@@ -234,25 +315,8 @@
     // The load-on-startup check can be really slow, so this will be dispatched out so our thread isn't blocked.
     dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     dispatch_async(queue, ^{
-        // FIXME: Should ask Gennadii if the "#ifdef SANDBOXING" should be removed and replaced with "if ([AppController isAppSandboxed])"
-#ifdef SANDBOXING
-        NSPredicate *predicate = [NSPredicate predicateWithFormat:@"bundleIdentifier == %@", kFlycutHelperId];
-        NSArray *helperApp = [[[NSWorkspace sharedWorkspace] runningApplications] filteredArrayUsingPredicate:predicate];
-        BOOL helperLaunched = ([helperApp count] != 0);
-        [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:helperLaunched]
-                                                            forKey:@"loadOnStartup"];
-#else
-
-        // This can take five seconds, perhaps more, so do it in the background instead of holding up opening of the preference panel.
-        int checkLoginRegistry = [UKLoginItemRegistry indexForLoginItemWithPath:[[NSBundle mainBundle] bundlePath]];
-        if ( checkLoginRegistry >= 1 ) {
-            [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:YES]
-                                                     forKey:@"loadOnStartup"];
-        } else {
-            [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:NO]
-                                                     forKey:@"loadOnStartup"];
-        }
-#endif
+        [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:[self loadOnStartupIsEnabled]]
+                                                 forKey:@"loadOnStartup"];
     });
     [self registerOrDeregisterICloudSync];
 
@@ -613,10 +677,10 @@
 	NSRect screenFrame = [[NSScreen mainScreen] frame];
 
 	int nextYMax = -1;
-	NSView *row = [self preferencePanelSliderRowForText:@"Bezel transparency"
+	NSView *row = [self preferencePanelSliderRowForText:NSLocalizedString(@"Bezel transparency", @"Appearance preference label")
 											 withTicks:16
-											   minText:@"Lighter"
-											   maxText:@"Darker"
+											   minText:NSLocalizedString(@"Lighter", @"Bezel transparency slider minimum label")
+											   maxText:NSLocalizedString(@"Darker", @"Bezel transparency slider maximum label")
 											  minValue:0.1
 											  maxValue:0.9
 											 frameMaxY:nextYMax
@@ -625,10 +689,10 @@
 	[appearancePanel addSubview:row];
 	nextYMax = row.frame.origin.y;
 
-	row = [self preferencePanelSliderRowForText:@"Bezel width"
+	row = [self preferencePanelSliderRowForText:NSLocalizedString(@"Bezel width", @"Appearance preference label")
 									  withTicks:50
-										minText:@"Smaller"
-										maxText:@"Bigger"
+										minText:NSLocalizedString(@"Smaller", @"Bezel size slider minimum label")
+										maxText:NSLocalizedString(@"Bigger", @"Bezel size slider maximum label")
 									   minValue:200
 									   maxValue:screenFrame.size.width
 									  frameMaxY:nextYMax
@@ -637,10 +701,10 @@
 	[appearancePanel addSubview:row];
 	nextYMax = row.frame.origin.y;
 
-	row = [self preferencePanelSliderRowForText:@"Bezel height"
+	row = [self preferencePanelSliderRowForText:NSLocalizedString(@"Bezel height", @"Appearance preference label")
 									  withTicks:50
-										minText:@"Smaller"
-										maxText:@"Bigger"
+										minText:NSLocalizedString(@"Smaller", @"Bezel size slider minimum label")
+										maxText:NSLocalizedString(@"Bigger", @"Bezel size slider maximum label")
 									   minValue:200
 									   maxValue:screenFrame.size.height
 									  frameMaxY:nextYMax
@@ -649,12 +713,12 @@
 	[appearancePanel addSubview:row];
 	nextYMax = row.frame.origin.y;
 
-	row = [self preferencePanelPopUpRowForText:@"Menu item icon"
+	row = [self preferencePanelPopUpRowForText:NSLocalizedString(@"Menu item icon", @"Appearance preference label")
 										 items:[NSArray arrayWithObjects:
-												@"Flycut icon",
-												@"Black Flycut icon",
-												@"White scissors",
-												@"Black scissors",nil]
+												NSLocalizedString(@"Flycut icon", @"Menu icon option"),
+												NSLocalizedString(@"Black Flycut icon", @"Menu icon option"),
+												NSLocalizedString(@"White scissors", @"Menu icon option"),
+												NSLocalizedString(@"Black scissors", @"Menu icon option"),nil]
 									 frameMaxY:nextYMax
 									   binding:@"menuIcon"
 										action:@selector(switchMenuIcon:)];
@@ -668,7 +732,7 @@
 //	[appearancePanel addSubview:row];
 //	nextYMax = row.frame.origin.y;
 
-    row = [self preferencePanelCheckboxRowForText:@"Show clipping source app and time"
+    row = [self preferencePanelCheckboxRowForText:NSLocalizedString(@"Show clipping source app and time", @"Appearance preference checkbox")
                                         frameMaxY:nextYMax
                                           binding:@"displayClippingSource"
                                            action:@selector(setupBezel:)];
@@ -687,10 +751,10 @@
     if ([AppController isAppSandboxed]) {
         // Saving to a prior-selected location while sandboxed would be unpleasant, so these really should be disabled always when sandboxed but can still show where the saves happen so the user knows what to expect.
         saveToLocationButton.enabled = NO;
-        [saveToLocationButton setTitle:@"Ask User"];
+        [saveToLocationButton setTitle:NSLocalizedString(@"Ask User", @"Sandboxed manual save location label")];
         autoSaveToLocationButton.enabled = NO;
-        [autoSaveToLocationButton setTitle:@"App Sandbox"];
-    }
+	        [autoSaveToLocationButton setTitle:NSLocalizedString(@"App Sandbox", @"Sandboxed automatic save location label")];
+	    }
 }
 
 -(IBAction) showPreferencePanel:(id)sender
@@ -721,20 +785,20 @@
 
 -(IBAction)toggleLoadOnStartup:(id)sender {
 	// Since the control in Interface Builder is bound to User Defaults and sends this action, this method is called after User Defaults already reflects the newly-selected state and merely conveys that value to the relevant mechanisms rather than acting to negate the User Defaults state.
-	if ( [[NSUserDefaults standardUserDefaults] boolForKey:@"loadOnStartup"] ) {
-        // FIXME: Should ask Gennadii if the "#ifdef SANDBOXING" should be removed and replaced with "if ([AppController isAppSandboxed])"
-#ifdef SANDBOXING
-        SMLoginItemSetEnabled((__bridge CFStringRef)kFlycutHelperId, YES);
-#else
-    [UKLoginItemRegistry addLoginItemWithPath:[[NSBundle mainBundle] bundlePath] hideIt:NO];
-#endif
+	BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:@"loadOnStartup"];
+	BOOL success = NO;
+	if ([AppController isAppSandboxed]) {
+		success = [self setSandboxedLoginItemEnabled:enabled];
+	} else if ( enabled ) {
+		NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
+		success = [UKLoginItemRegistry indexForLoginItemWithPath:bundlePath] >= 0 || [UKLoginItemRegistry addLoginItemWithPath:bundlePath hideIt:NO];
 	} else {
-        // FIXME: Should ask Gennadii if the "#ifdef SANDBOXING" should be removed and replaced with "if ([AppController isAppSandboxed])"
-#ifdef SANDBOXING
-        SMLoginItemSetEnabled((__bridge CFStringRef)kFlycutHelperId, NO);
-#else
-		[UKLoginItemRegistry removeLoginItemWithPath:[[NSBundle mainBundle] bundlePath]];
-#endif
+		NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
+		success = [UKLoginItemRegistry indexForLoginItemWithPath:bundlePath] < 0 || [UKLoginItemRegistry removeLoginItemWithPath:bundlePath];
+	}
+	if ( !success ) {
+		[[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:!enabled]
+		                                         forKey:@"loadOnStartup"];
 	}
 }
 
@@ -789,7 +853,7 @@
 
 - (void)metaKeysReleased
 {
-	if ( ! isBezelPinned ) {
+	if ( isBezelDisplayed && ! isBezelPinned ) {
 		[self pasteFromStack];
 	}
 }
@@ -822,7 +886,7 @@
 }
 
 /*" +fakeCommandV synthesizes keyboard events for Cmd-v Paste shortcut. "*/
--(void)fakeCommandV { [self fakeKey:[srTransformer reverseTransformedValue:@"V"] withCommandFlag:TRUE]; }
+-(void)fakeCommandV { [self fakeKey:@(kVK_ANSI_V) withCommandFlag:TRUE]; }
 
 /*" +fakeDownArrow synthesizes keyboard events for the down-arrow key. "*/
 -(void)fakeDownArrow { [self fakeKey:@125 withCommandFlag:FALSE]; }
@@ -887,11 +951,14 @@
 			dispatch_async(queue, ^{
 
 				// This operation blocks until the transfer is complete, though it was was here before the RDC issue was discovered.  Convenient.
-                NSString *contents = [jcPasteboard stringForType:type];
+				NSString *contents = [jcPasteboard stringForType:type];
 
 				// Toggle back if dealing with the RDC issue.
-				if (largeCopyRisk)
-					[self toggleMenuIconDisabled];
+				if (largeCopyRisk) {
+					dispatch_async(dispatch_get_main_queue(), ^{
+						[self toggleMenuIconDisabled];
+					});
+				}
 
 				if ( contents == nil || [flycutOperator shouldSkip:contents ofType:[jcPasteboard availableTypeFromArray:[NSArray arrayWithObject:NSStringPboardType]] fromAvailableTypes:[jcPasteboard types]] ) {
                    DLog(@"Contents: Empty or skipped");
@@ -912,7 +979,11 @@
 			 else [self stackDown];
 			return;
 		}
-		unichar pressed = [[theEvent charactersIgnoringModifiers] characterAtIndex:0];
+		NSString *characters = [theEvent charactersIgnoringModifiers];
+		if ( 0 == [characters length] ) {
+			return;
+		}
+		unichar pressed = [characters characterAtIndex:0];
         NSUInteger modifiers = [theEvent modifierFlags];
 		switch (pressed) {
 			case 0x1B:
@@ -1063,7 +1134,7 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 	[flycutOperator adjustStackPositionIfOutOfBounds];
 	if ([flycutOperator jcListCount] == 0) { // empty
 		[bezel setText:@""];
-		[bezel setCharString:@"Empty"];
+		[bezel setCharString:NSLocalizedString(@"Empty", @"Bezel text shown when the clipping list is empty")];
         [bezel setSource:@""];
         [bezel setDate:@""];
         [bezel setSourceIcon:nil];
@@ -1095,7 +1166,7 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 - (void) hideBezel
 {
 	[bezel orderOut:nil];
-	[bezel setCharString:@"Empty"];
+	[bezel setCharString:NSLocalizedString(@"Empty", @"Bezel text shown when the clipping list is empty")];
 	isBezelDisplayed = NO;
 }
 
@@ -1138,7 +1209,7 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 	mainHotKey = [[SGHotKey alloc] initWithIdentifier:@"mainHotKey"
 											   keyCombo:[SGKeyCombo keyComboWithKeyCode:[mainRecorder keyCombo].code
 																			  modifiers:[mainRecorder cocoaToCarbonFlags: [mainRecorder keyCombo].flags]]];
-	[mainHotKey setName: @"Activate Flycut HotKey"]; //This is typically used by PTKeyComboPanel
+	[mainHotKey setName:NSLocalizedString(@"Activate Flycut HotKey", @"Name of the global hotkey")]; //This is typically used by PTKeyComboPanel
 	[mainHotKey setTarget: self];
 	[mainHotKey setAction: @selector(hitMainHotKey:)];
 	[[SGHotKeyCenter sharedCenter] registerHotKey:mainHotKey];
@@ -1148,10 +1219,10 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 {
 	if ( [[NSUserDefaults standardUserDefaults] boolForKey:@"syncSettingsViaICloud"] ) {
 		NSAlert *alert = [[NSAlert alloc] init];
-		[alert setMessageText:@"Warning"];
-		[alert addButtonWithTitle:@"Ok"];
-		[alert addButtonWithTitle:@"Cancel"];
-		[alert setInformativeText:@"Enabling iCloud Settings Sync will overwrite local settings if your iCloud account already has Flycut settings.  If you have never enabled this in Flycut on any computer, your current settings will be retained and loaded into iCloud."];
+		[alert setMessageText:NSLocalizedString(@"Warning", @"Alert title")];
+		[alert addButtonWithTitle:NSLocalizedString(@"OK", @"Default alert button")];
+		[alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"Cancel alert button")];
+		[alert setInformativeText:NSLocalizedString(@"Enabling iCloud Settings Sync will overwrite local settings if your iCloud account already has Flycut settings. If you have never enabled this in Flycut on any computer, your current settings will be retained and loaded into iCloud.", @"iCloud settings sync warning")];
 		if ( [alert runModal] != NSAlertFirstButtonReturn )
 		{
 			[[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:NO]
@@ -1168,12 +1239,12 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 {
 	if ( [[NSUserDefaults standardUserDefaults] boolForKey:@"syncClippingsViaICloud"] ) {
 		if ( [[NSUserDefaults standardUserDefaults] integerForKey:@"savePreference"] < 2 ) {
-			// Must set syncClippingsViaICloud = 2
-			NSAlert *alert = [[NSAlert alloc] init];
-			[alert setMessageText:@"Settings Change"];
-			[alert addButtonWithTitle:@"Ok"];
-			[alert addButtonWithTitle:@"Cancel"];
-			[alert setInformativeText:@"iCloud Clippings Sync will set 'Save: After each clip'."];
+				// Must set syncClippingsViaICloud = 2
+				NSAlert *alert = [[NSAlert alloc] init];
+				[alert setMessageText:NSLocalizedString(@"Settings Change", @"Alert title")];
+				[alert addButtonWithTitle:NSLocalizedString(@"OK", @"Default alert button")];
+				[alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"Cancel alert button")];
+				[alert setInformativeText:NSLocalizedString(@"iCloud Clippings Sync will set 'Save: After each clip'.", @"iCloud clippings sync save preference warning")];
 			if ( [alert runModal] == NSAlertFirstButtonReturn )
 			{
 				[[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithInt:2]
@@ -1193,12 +1264,12 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 {
 	if ( [[NSUserDefaults standardUserDefaults] integerForKey:@"savePreference"] < 2 ) {
 		if ( [[NSUserDefaults standardUserDefaults] boolForKey:@"syncClippingsViaICloud"] ) {
-			// Must disable syncClippingsViaICloud
-			NSAlert *alert = [[NSAlert alloc] init];
-			[alert setMessageText:@"Settings Change"];
-			[alert addButtonWithTitle:@"Ok"];
-			[alert addButtonWithTitle:@"Cancel"];
-			[alert setInformativeText:@"Disabling 'Save: After each clip' will disable iCloud Clippings Sync."];
+				// Must disable syncClippingsViaICloud
+				NSAlert *alert = [[NSAlert alloc] init];
+				[alert setMessageText:NSLocalizedString(@"Settings Change", @"Alert title")];
+				[alert addButtonWithTitle:NSLocalizedString(@"OK", @"Default alert button")];
+				[alert addButtonWithTitle:NSLocalizedString(@"Cancel", @"Cancel alert button")];
+				[alert setInformativeText:NSLocalizedString(@"Disabling 'Save: After each clip' will disable iCloud Clippings Sync.", @"Save preference warning when iCloud clippings sync is enabled")];
 
 			if ( [alert runModal] == NSAlertFirstButtonReturn )
 			{
@@ -1221,7 +1292,7 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 	[panel setCanChooseDirectories:YES];
 	[panel setCanCreateDirectories:YES];
 	[panel setAllowsMultipleSelection:NO];
-	[panel setMessage:@"Select a directory."];
+	[panel setMessage:NSLocalizedString(@"Select a directory.", @"Directory picker message")];
 
 	// Display the panel attached to the document's window.
 	[panel beginSheetModalForWindow:prefsPanel completionHandler:^(NSInteger result){
@@ -1246,11 +1317,11 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 
 -(IBAction)clearClippingList:(id)sender {
     int choice;
-	
+
 	[NSApp activateIgnoringOtherApps:YES];
-    choice = NSRunAlertPanel(@"Clear Clipping List", 
-							 @"Do you want to clear all recent clippings?",
-							 @"Clear", @"Cancel", nil);
+    choice = NSRunAlertPanel(NSLocalizedString(@"Clear Clipping List", @"Clear clippings alert title"),
+							 NSLocalizedString(@"Do you want to clear all recent clippings?", @"Clear clippings alert message"),
+							 NSLocalizedString(@"Clear", @"Confirm clear button"), NSLocalizedString(@"Cancel", @"Cancel alert button"), nil);
 	
     // on clear, zap the list and redraw the menu
     if ( choice == NSAlertDefaultReturn ) {
@@ -1366,9 +1437,9 @@ didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
 
 -(void) fillBezel
 {
-    FlycutClipping* clipping = [flycutOperator clippingAtStackPosition];
-    [bezel setText:[NSString stringWithFormat:@"%@", [clipping contents]]];
-    [bezel setCharString:[NSString stringWithFormat:@"%d of %d", [flycutOperator stackPosition] + 1, [flycutOperator jcListCount]]];
+	    FlycutClipping* clipping = [flycutOperator clippingAtStackPosition];
+	    [bezel setText:[NSString stringWithFormat:@"%@", [clipping contents]]];
+	    [bezel setCharString:[NSString stringWithFormat:NSLocalizedString(@"%d of %d", @"Bezel clipping position"), [flycutOperator stackPosition] + 1, [flycutOperator jcListCount]]];
     NSString *localizedName = [clipping appLocalizedName];
     if ( nil == localizedName )
         localizedName = @"";

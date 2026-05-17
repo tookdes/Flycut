@@ -1,11 +1,34 @@
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors
 *.swp
+*~
 *~.nib
-build/
+
+# Xcode user state
 *.pbxuser
-*.perspective
-*.perspectivev3
 *.mode1v3
 *.mode2v3
-xcuserdata
-xcshareddata
+*.perspective
+*.perspectivev3
+*.xcuserstate
+xcuserdata/
+
+# Local build products
+build/
+DerivedData/
+Archives/
+*.app
+*.dSYM
+*.xcarchive
+*.ipa
+*.pkg
+*.dmg
+*.zip
+*.tar.gz
+
+# Temporary packaging output
+*.tmp

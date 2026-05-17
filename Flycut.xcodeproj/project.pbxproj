@@ -81,6 +81,9 @@
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
 		8D151CC21FAC2B38005132F0 /* acknowledgements.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8D151CC11FAC2B38005132F0 /* acknowledgements.txt */; };
 		8D151CC51FAC2F25005132F0 /* acknowledgements.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8D151CC11FAC2B38005132F0 /* acknowledgements.txt */; };
+		C0DE00000000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE0000000000000000000A /* Localizable.strings */; };
+		C0DE00000000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE0000000000000000000B /* InfoPlist.strings */; };
+		C0DE00000000000000000003 /* ShortcutRecorder.strings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE0000000000000000000C /* ShortcutRecorder.strings */; };
 		8D180DFE1F9CD0580001F912 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 8D180DFD1F9CD0580001F912 /* Settings.bundle */; };
 		8D180E221F9FD3D70001F912 /* InAppSettingsKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8D180E211F9FD3320001F912 /* InAppSettingsKit.framework */; };
 		8D180E231F9FD3D70001F912 /* InAppSettingsKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8D180E211F9FD3320001F912 /* InAppSettingsKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -231,6 +234,12 @@
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		29B97319FDCFA39411CA2CEA /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = English.lproj/MainMenu.nib; sourceTree = "<group>"; };
+		C0DE00000000000000000004 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/MainMenu.strings"; sourceTree = "<group>"; };
+		C0DE00000000000000000005 /* English */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/Localizable.strings; sourceTree = "<group>"; };
+		C0DE00000000000000000006 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		C0DE00000000000000000007 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		C0DE00000000000000000008 /* English */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/ShortcutRecorder.strings; sourceTree = "<group>"; };
+		C0DE00000000000000000009 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/ShortcutRecorder.strings"; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		32CA4F630368D1EE00C91783 /* Flycut_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Flycut_Prefix.pch; sourceTree = "<group>"; };
@@ -487,11 +496,14 @@
 				7761C8D6139BE06B000FB3AB /* net.sf.jumpcut.preferences.hotkey.tiff */,
 				7761C8D7139BE06B000FB3AB /* net.sf.jumpcut.scissors_bw16.png */,
 				7761C8D8139BE06B000FB3AB /* RemoveShortcut.tif */,
-				7761C8D9139BE06B000FB3AB /* RemoveShortcutPressed.tif */,
-				7761C8DA139BE06B000FB3AB /* RemoveShortcutRollover.tif */,
-				29B97318FDCFA39411CA2CEA /* MainMenu.nib */,
-				8D151CC11FAC2B38005132F0 /* acknowledgements.txt */,
-			);
+					7761C8D9139BE06B000FB3AB /* RemoveShortcutPressed.tif */,
+					7761C8DA139BE06B000FB3AB /* RemoveShortcutRollover.tif */,
+					29B97318FDCFA39411CA2CEA /* MainMenu.nib */,
+					C0DE0000000000000000000B /* InfoPlist.strings */,
+					C0DE0000000000000000000A /* Localizable.strings */,
+					C0DE0000000000000000000C /* ShortcutRecorder.strings */,
+					8D151CC11FAC2B38005132F0 /* acknowledgements.txt */,
+				);
 			name = Resources;
 			sourceTree = "<group>";
 		};
@@ -779,10 +791,10 @@
 				8D1107290486CEB800E47090 /* Resources */,
 				8D11072C0486CEB800E47090 /* Sources */,
 				8D11072E0486CEB800E47090 /* Frameworks */,
-				8D60A1BA1BC8399900A26CBF /* Set meaningful build number */,
 				AAE2036C0A27B2B9002DCC2A /* Headers */,
 				77AE730823D2D49100F6A44B /* Embed Frameworks */,
 				77192A3923D6F45F00EDB9BC /* CopyFiles */,
+				8D60A1BA1BC8399900A26CBF /* Set meaningful build number */,
 			);
 			buildRules = (
 			);
@@ -872,10 +884,11 @@
 			knownRegions = (
 				English,
 				Japanese,
-				French,
-				German,
-				Base,
-			);
+					French,
+					German,
+					Base,
+					"zh-Hans",
+				);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* Jumpcut */;
 			projectDirPath = "";
 			projectReferences = (
@@ -988,10 +1001,13 @@
 		};
 		8D1107290486CEB800E47090 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */,
-				7761C8DB139BE06B000FB3AB /* com.generalarcade.flycut.16.png in Resources */,
+				buildActionMask = 2147483647;
+				files = (
+					8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */,
+					C0DE00000000000000000002 /* InfoPlist.strings in Resources */,
+					C0DE00000000000000000001 /* Localizable.strings in Resources */,
+					C0DE00000000000000000003 /* ShortcutRecorder.strings in Resources */,
+					7761C8DB139BE06B000FB3AB /* com.generalarcade.flycut.16.png in Resources */,
 				7761C8DC139BE06B000FB3AB /* com.generalarcade.flycut.32.png in Resources */,
 				7761C8DF139BE06B000FB3AB /* jumpcut.icns in Resources */,
 				8D2E28891B0669F500AE62C8 /* com.generalarcade.flycut.xout.32.png in Resources */,
@@ -1017,6 +1033,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		8D60A1BA1BC8399900A26CBF /* Set meaningful build number */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 12;
 			files = (
 			);
@@ -1143,15 +1160,42 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
-		29B97318FDCFA39411CA2CEA /* MainMenu.nib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				29B97319FDCFA39411CA2CEA /* English */,
-			);
-			name = MainMenu.nib;
-			sourceTree = "<group>";
-		};
-		77192A2D23D6EA7B00EDB9BC /* MainMenu.xib */ = {
+			29B97318FDCFA39411CA2CEA /* MainMenu.nib */ = {
+				isa = PBXVariantGroup;
+				children = (
+					29B97319FDCFA39411CA2CEA /* English */,
+					C0DE00000000000000000004 /* zh-Hans */,
+				);
+				name = MainMenu.nib;
+				sourceTree = "<group>";
+			};
+			C0DE0000000000000000000A /* Localizable.strings */ = {
+				isa = PBXVariantGroup;
+				children = (
+					C0DE00000000000000000005 /* English */,
+					C0DE00000000000000000006 /* zh-Hans */,
+				);
+				name = Localizable.strings;
+				sourceTree = "<group>";
+			};
+			C0DE0000000000000000000B /* InfoPlist.strings */ = {
+				isa = PBXVariantGroup;
+				children = (
+					C0DE00000000000000000007 /* zh-Hans */,
+				);
+				name = InfoPlist.strings;
+				sourceTree = "<group>";
+			};
+			C0DE0000000000000000000C /* ShortcutRecorder.strings */ = {
+				isa = PBXVariantGroup;
+				children = (
+					C0DE00000000000000000008 /* English */,
+					C0DE00000000000000000009 /* zh-Hans */,
+				);
+				name = ShortcutRecorder.strings;
+				sourceTree = "<group>";
+			};
+			77192A2D23D6EA7B00EDB9BC /* MainMenu.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
 				77192A2E23D6EA7B00EDB9BC /* Base */,
@@ -1213,7 +1257,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				INFOPLIST_FILE = FlycutHelper/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.generalarcade.flycuthelper;
@@ -1252,7 +1296,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				INFOPLIST_FILE = FlycutHelper/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.generalarcade.flycuthelper;
@@ -1621,7 +1665,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = S8JLSG5ES7;
 				ENABLE_HARDENED_RUNTIME = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1640,8 +1684,9 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = /Applications;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				MARKETING_VERSION = 1.9.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MARKETING_VERSION = 1.9.7;
+				OTHER_LDFLAGS = "$(inherited) -framework Security";
 				PRODUCT_BUNDLE_IDENTIFIER = com.generalarcade.flycut;
 				PRODUCT_NAME = Flycut;
 				PROVISIONING_PROFILE = "";
@@ -1658,7 +1703,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = S8JLSG5ES7;
 				ENABLE_HARDENED_RUNTIME = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1674,8 +1719,9 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = /Applications;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				MARKETING_VERSION = 1.9.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MARKETING_VERSION = 1.9.7;
+				OTHER_LDFLAGS = "$(inherited) -framework Security";
 				PRODUCT_BUNDLE_IDENTIFIER = com.generalarcade.flycut;
 				PRODUCT_NAME = Flycut;
 				PROVISIONING_PROFILE = "";

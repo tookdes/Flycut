@@ -52,12 +52,12 @@
                     SRStringForCarbonModifierFlagsAndKeyCode( flags, keyCode )];
                 NSString *recoverySuggestion = [NSString stringWithFormat: 
                     SRLoc(@"The key combination \"%@\" can't be used because %@."), 
-                    SRReadableStringForCarbonModifierFlagsAndKeyCode( flags, keyCode ),
-                    ( delegateReason && [delegateReason length] ) ? delegateReason : @"it's already used"];
+	                    SRReadableStringForCarbonModifierFlagsAndKeyCode( flags, keyCode ),
+	                    ( delegateReason && [delegateReason length] ) ? delegateReason : SRLoc(@"it's already used")];
                 NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
 										  description, NSLocalizedDescriptionKey,
 										  recoverySuggestion, NSLocalizedRecoverySuggestionErrorKey,
-										  [NSArray arrayWithObject:@"OK"], NSLocalizedRecoveryOptionsErrorKey, // Is this needed? Shouldn't it show 'OK' by default? -AK
+										  [NSArray arrayWithObject:SRLoc(@"OK")], NSLocalizedRecoveryOptionsErrorKey, // Is this needed? Shouldn't it show 'OK' by default? -AK
 										  nil];
                 *error = [NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:userInfo];
             }
@@ -134,7 +134,7 @@
 				NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
 										  description, NSLocalizedDescriptionKey,
 										  recoverySuggestion, NSLocalizedRecoverySuggestionErrorKey,
-										  [NSArray arrayWithObject:@"OK"], NSLocalizedRecoveryOptionsErrorKey,
+										  [NSArray arrayWithObject:SRLoc(@"OK")], NSLocalizedRecoveryOptionsErrorKey,
 										  nil];
                 *error = [NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:userInfo];
             }
@@ -213,7 +213,7 @@
                     NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
 											  description, NSLocalizedDescriptionKey,
 											  recoverySuggestion, NSLocalizedRecoverySuggestionErrorKey,
-											  [NSArray arrayWithObject:@"OK"], NSLocalizedRecoveryOptionsErrorKey,
+											  [NSArray arrayWithObject:SRLoc(@"OK")], NSLocalizedRecoveryOptionsErrorKey,
 											  nil];
                     *error = [NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:userInfo];
                 }

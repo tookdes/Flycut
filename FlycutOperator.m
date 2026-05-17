@@ -157,10 +157,13 @@
 		! [[NSUserDefaults standardUserDefaults] boolForKey:@"stifleRememberResizeWarning"]
 		) {
 
-		NSString *choice = [self delegateAlertWithMessageText:@"Resize Stack"
-											  informationText:@"Resizing the stack to a value below its present size will cause clippings to be lost."
-												 buttonsTexts:@[@"Resize", @"Cancel", @"Don't Warn Me Again"]];
-		if ( [choice isEqualToString:@"Cancel"] ) {
+		NSString *resizeButton = NSLocalizedString(@"Resize", @"Confirm resizing the clipping stack");
+		NSString *cancelButton = NSLocalizedString(@"Cancel", @"Cancel alert button");
+		NSString *dontWarnButton = NSLocalizedString(@"Don't Warn Me Again", @"Do not show warning again button");
+		NSString *choice = [self delegateAlertWithMessageText:NSLocalizedString(@"Resize Stack", @"Resize stack alert title")
+											  informationText:NSLocalizedString(@"Resizing the stack to a value below its present size will cause clippings to be lost.", @"Resize stack alert message")
+												 buttonsTexts:@[resizeButton, cancelButton, dontWarnButton]];
+		if ( [choice isEqualToString:cancelButton] ) {
 			// Cancel - Change to prior setting.
 			newRemember = oldRemeber;
 			if ( isPrimaryStore ) {
@@ -170,7 +173,7 @@
 				[[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithInt:newRemember]
 														 forKey:@"favoritesRememberNum"];
 			}
-		} else if ( [choice isEqualToString:@"Don't Warn Me Again"] ) {
+		} else if ( [choice isEqualToString:dontWarnButton] ) {
 			// Don't Warn Me Again
 			[[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:YES]
 													 forKey:@"stifleRememberResizeWarning"];
@@ -695,7 +698,7 @@
 	[self integrateStoreAtKey:@"jcList" into:clippingStore descriptiveName:@""];
 	// It is possible that the user would disable sync rather than merge the main clippings store.  They would have a poor user experience if they were then asked the same question about the favorites store after believing that they had disabled sync, so check setting before integrating.
 	if ( [[NSUserDefaults standardUserDefaults] boolForKey:@"syncClippingsViaICloud"] )
-		[self integrateStoreAtKey:@"favoritesList" into:favoritesStore descriptiveName:@"favorites "];
+		[self integrateStoreAtKey:@"favoritesList" into:favoritesStore descriptiveName:NSLocalizedString(@"favorites ", @"Prefix for favorites clippings in iCloud first sync alert")];
 	DLog(@"integrating stores complete");
 
 	inhibitSaveEngineAfterListModification = NO;
@@ -767,35 +770,40 @@
 					promptUser = YES;
 				}
 
+				NSString *mergeListsButton = NSLocalizedString(@"Merge Lists", @"First sync alert button");
+				NSString *overwriteDeviceButton = NSLocalizedString(@"Overwrite Device List", @"First sync alert button");
+				NSString *overwriteICloudButton = NSLocalizedString(@"Overwrite iCloud List", @"First sync alert button");
+				NSString *disableSyncButton = NSLocalizedString(@"Disable Sync", @"First sync alert button");
+
 				while ( promptUser )
 				{
 					promptUser = NO;
 
-					NSString *choice = [self delegateAlertWithMessageText:@"First Sync"
-														  informationText:[NSString stringWithFormat:@"Flycut found %i %@clipping%@ shared by both iCloud and this device, %i only in iCloud, and \%i only on this device.  How can I handle these for you?",
+					NSString *choice = [self delegateAlertWithMessageText:NSLocalizedString(@"First Sync", @"First iCloud clippings sync alert title")
+														  informationText:[NSString stringWithFormat:NSLocalizedString(@"Flycut found %i %@clipping%@ shared by both iCloud and this device, %i only in iCloud, and %i only on this device. How can I handle these for you?", @"First iCloud clippings sync conflict message"),
 																		   (ourCount-ourDistinct),
 																		   name,
 																		   ((ourCount-ourDistinct)!=1?@"s":@""),
 																		   newDistinct,ourDistinct]
-															 buttonsTexts:@[@"Merge Lists",
-																			@"Overwrite Device List",
-																			@"Overwrite iCloud List",
-																			@"Disable Sync"]];
+															 buttonsTexts:@[mergeListsButton,
+																			overwriteDeviceButton,
+																			overwriteICloudButton,
+																			disableSyncButton]];
 
 					if (!choice )
 					{
 						// This most likely means the UI wasn't implemented, so cover it with merge.
-						choice = @"Merge Lists";
+						choice = mergeListsButton;
 					}
 
-					if ( [choice isEqualToString:@"Merge Lists"] )
+					if ( [choice isEqualToString:mergeListsButton] )
 					{
 						mergeLists = YES;
 					}
-					else if ( [choice isEqualToString:@"Disable Sync"] )
+					else if ( [choice isEqualToString:disableSyncButton] )
 					{
 						[[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:NO]
-																 forKey:@"syncClippingsViaICloud"];
+															 forKey:@"syncClippingsViaICloud"];
 						[newContent release];
 						[self registerOrDeregisterICloudSync];
 						[self actionAfterListModification]; // To overwrite what sync put in the defaults.
@@ -803,19 +811,21 @@
 					}
 					else
 					{
-						NSString *okCancel = [self delegateAlertWithMessageText:@"Warning"
-																informationText:[NSString stringWithFormat:@"%@ will cause clippings to be lost!", choice]
-																   buttonsTexts:@[@"Ok", @"Cancel"]];
+						NSString *okButton = NSLocalizedString(@"OK", @"Default alert button");
+						NSString *cancelButton = NSLocalizedString(@"Cancel", @"Cancel alert button");
+						NSString *okCancel = [self delegateAlertWithMessageText:NSLocalizedString(@"Warning", @"Alert title")
+															informationText:[NSString stringWithFormat:NSLocalizedString(@"%@ will cause clippings to be lost!", @"First sync destructive action warning"), choice]
+															   buttonsTexts:@[okButton, cancelButton]];
 
-						if ( [okCancel isEqualToString:@"Ok"] )
+						if ( [okCancel isEqualToString:okButton] )
 						{
-							if ( [choice isEqualToString:@"Overwrite Device List"] )
+							if ( [choice isEqualToString:overwriteDeviceButton] )
 							{
 								// Just accept whatever iCloud has.
 								[store clearInsertionJournalCount:[[store insertionJournal] count]];
 								[store clearDeletionJournalCount:[[store deletionJournal] count]];
 							}
-							else if ( [choice isEqualToString:@"Overwrite iCloud List"] )
+							else if ( [choice isEqualToString:overwriteICloudButton] )
 							{
 								// Ignore iCloud this time.
 								[newContent release];
